@@ -19,4 +19,4 @@ venv/
 *.log
 
 # Output and temp state
-state/temp/ 
+state/temp/
