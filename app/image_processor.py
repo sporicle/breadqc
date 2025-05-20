@@ -3,47 +3,56 @@ import numpy as np
 
 def create_bread_mask(rgb_image: np.ndarray) -> np.ndarray:
     """
-    Create a binary mask isolating the largest contour in the image (assumed to be bread).
-    Uses HSV color-based segmentation to better handle off-white backgrounds.
+    Create a binary mask isolating the bread using K-means color clustering.
+    This approach is more robust than simple HSV thresholding as it can handle
+    varying lighting conditions and different background colors.
     
     Args:
         rgb_image (np.ndarray): Input RGB image as numpy array
         
     Returns:
-        np.ndarray: Binary mask where 1 indicates bread and 0 indicates background
+        np.ndarray: Binary mask where 255 indicates bread and 0 indicates background
     """
-    # Convert RGB to HSV
-    hsv = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2HSV)
+    # Reshape the image to be a list of pixels
+    pixels = rgb_image.reshape(-1, 3).astype(np.float32)
     
-    # Define ranges for off-white background in HSV
-    # H: 0-180, S: 0-30 (low saturation for white/off-white), V: 200-255 (high value for white)
-    lower_white = np.array([0, 0, 200])
-    upper_white = np.array([180, 30, 255])
+    # Define criteria for K-means
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
+    k = 2  # We want to separate bread from background
     
-    # Create mask for off-white background
-    mask_white = cv2.inRange(hsv, lower_white, upper_white)
+    # Perform K-means clustering
+    _, labels, centers = cv2.kmeans(pixels, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
     
-    # Invert the mask (now 1 for bread, 0 for background)
-    mask = cv2.bitwise_not(mask_white)
+    # Convert back to uint8
+    centers = np.uint8(centers)
     
-    # Apply morphological operations to clean up the mask
+    # Flatten the labels array
+    labels = labels.flatten()
+    
+    # Create a mask where the darker cluster is considered bread
+    # (assuming bread is generally darker than the background)
+    bread_cluster = np.argmin([np.mean(center) for center in centers])
+    mask = (labels == bread_cluster).reshape(rgb_image.shape[:2])
+    
+    # Convert to uint8 and scale to 0/255
+    mask = np.uint8(mask * 255)
+    
+    # Clean up the mask using morphological operations
     kernel = np.ones((5,5), np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)  # Fill holes
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)   # Remove noise
     
-    # Find contours
+    # Find the largest contour (assumed to be the bread)
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     if not contours:
         raise ValueError("No contours found in the image")
     
-    # Find the largest contour
-    largest_contour = max(contours, key=cv2.contourArea)
-    
     # Create a blank mask
     final_mask = np.zeros_like(mask)
     
-    # Draw the largest contour on the mask
+    # Draw the largest contour
+    largest_contour = max(contours, key=cv2.contourArea)
     cv2.drawContours(final_mask, [largest_contour], -1, 255, -1)
     
     return final_mask

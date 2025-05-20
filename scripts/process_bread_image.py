@@ -16,7 +16,7 @@ def process_bread_image(image_name):
     # Create timestamped folder for this run
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     image_base = os.path.splitext(image_name)[0]
-    output_dir = f'state/temp/{image_base}_{timestamp}'
+    output_dir = f'state/temp/{timestamp}_{image_base}'
     os.makedirs(output_dir, exist_ok=True)
     
     print(f"Processing {image_name}...")
@@ -43,16 +43,19 @@ def process_bread_image(image_name):
     Image.fromarray(masked_image).save(masked_path)
     print("✓ Applied mask and saved result")
     
-    # Create heatmap with default settings
+    # Create heatmap
     heatmap_path = os.path.join(output_dir, 'heatmap.png')
     pct, _, heatmap_img = visualize_heatmap(
         masked_image=masked_image,
         mask=mask,
         output_path=heatmap_path,
-        red_threshold=0.0,  # Use your default
-        red_intensity=60,   # Use your default
-        enable_flood_fill=False,  # Use your default
-        flood_fill_kernel=1       # Use your default
+        dark_brightness_threshold=0.52,  # Default threshold for dark regions
+        dark_region_bias=1,          # Default bias for dark regions
+        red_intensity=120,             # Default red overlay intensity
+        green_intensity=120,           # Default green overlay intensity
+        blue_intensity=120,            # Default blue overlay intensity
+        enable_flood_fill=False,       # Default flood fill setting
+        flood_fill_kernel=3            # Default flood fill kernel size
     )
     print("✓ Created heatmap")
     
