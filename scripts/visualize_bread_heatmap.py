@@ -12,7 +12,7 @@ def visualize_heatmap(masked_image, mask, output_path,
                      k_means_epsilon=0.2,        # Stop if change is less than this
                      
                      # Dark region detection
-                     dark_brightness_threshold=0.5,  # Threshold for dark regions (0-1)
+                     dark_brightness_threshold=1,  # Threshold for dark regions (0-1)
                      dark_region_bias=1.2,          # Bias towards dark regions (>1 = more aggressive)
                      
                      # Crust detection
